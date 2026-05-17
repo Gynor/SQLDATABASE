@@ -148,4 +148,4 @@ def download_file(physical_filename):
 
 if __name__ == '__main__':
     # Run the Flask development server
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='192.168.1.226', port=5000)
