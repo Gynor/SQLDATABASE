@@ -174,4 +174,4 @@ def delete_file(file_id):
 
 if __name__ == '__main__':
     # Run the Flask development server
-    app.run(host='192.168.1.226', port=5000)
+    app.run(host='192.168.1.226', port=80)
