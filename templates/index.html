@@ -2,45 +2,111 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Core of Alucard</title>
+    <title>Local Metadata Database</title>
     <style>
-        /* Basic readability styles */
-        body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        /* Base Styles */
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            padding: 20px; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background-color: #121212; 
+            color: #e0e0e0; 
+        }
         .form-group { margin-bottom: 15px; }
-        .file-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
-        .metadata-box { background: #f5f5f5; padding: 10px; font-family: monospace; font-size: 0.9em; margin-top: 10px; }
-        input[type="text"], select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
-        button { padding: 8px 15px; cursor: pointer; }
+        .metadata-box { 
+            background: #1e1e1e; 
+            padding: 10px; 
+            font-family: monospace; 
+            font-size: 0.9em; 
+            margin-top: 10px; 
+            border-radius: 4px; 
+            color: #d4d4d4; 
+            border: 1px solid #333;
+        }
+
+        /* Inputs and Buttons */
+        input[type="text"], input[type="file"], select { 
+            width: 100%; 
+            padding: 8px; 
+            box-sizing: border-box; 
+            background-color: #2d2d2d; 
+            color: #ffffff; 
+            border: 1px solid #444; 
+            border-radius: 4px;
+            color-scheme: dark;
+        }
+        button { 
+            padding: 8px 15px; 
+            cursor: pointer; 
+            border: 1px solid #555; 
+            border-radius: 4px; 
+            background: #333; 
+            color: #e0e0e0; 
+        }
+        button:hover { background: #444; }
+
+        /* File List Styles */
+        .file-list-item { 
+            border: 1px solid #333; 
+            padding: 15px; 
+            margin-bottom: 5px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            background-color: #1e1e1e;
+            transition: background-color 0.2s;
+        }
+        .file-list-item:hover { background-color: #2a2a2a; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background: rgba(0,0,0,0.8); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center;
+        }
+        .modal-content {
+            background: #1e1e1e; 
+            color: #e0e0e0;
+            padding: 25px; 
+            border-radius: 8px; 
+            width: 90%; 
+            max-width: 500px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #333;
+        }
+        .close-btn {
+            position: absolute; 
+            top: 15px; 
+            right: 20px; 
+            cursor: pointer; 
+            font-size: 1.5em; 
+            color: #aaa;
+            line-height: 1;
+        }
+        .close-btn:hover { color: #fff; }
     </style>
 </head>
 <body>
-    <h2>Add New Record</h2>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <div class="form-group">
-            <label for="file"><strong>File:</strong> (Use .zip format for folders)</label>
-            <input type="file" name="file" id="file" required>
-        </div>
 
-        <div class="form-group">
-            <label for="category"><strong>Category:</strong></label>
-            <select name="category" id="category" onchange="updateDynamicFields()" required>
-                <option value="">Select a category...</option>
-                <option value="article">Article</option>
-                <option value="mtg">Magic: The Gathering Card</option>
-                <option value="project">Project Archive</option>
-            </select>
-        </div>
+    <!-- Main Header & Upload Trigger -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">System Files</h2>
+        <button onclick="openModal('upload-modal')" style="background-color: #007bff; color: white; border: none;">+ Upload New File</button>
+    </div>
 
-        <!-- Container to be populated by JS based on the selected category -->
-        <div id="dynamic-fields-container"></div>
-
-        <button type="submit">Upload to System</button>
-    </form>
-
-    <hr>
-    
-    <h2>Search and Filter Records</h2>
-    <form action="/" method="GET">
+    <!-- Search and Filter Section -->
+    <form action="/" method="GET" style="margin-bottom: 20px;">
         <div class="form-group" style="display: flex; gap: 10px; align-items: stretch;">
             <input type="text" name="search" placeholder="Search filename or metadata content..." value="{{ search_query }}" style="margin: 0; flex: 1;">
             
@@ -51,52 +117,90 @@
                 <option value="project" {% if cat_filter == 'project' %}selected{% endif %}>Project Archive</option>
             </select>
             
-            <button style="height:35px;width:120px;" type="submit">Filter</button></a>
-            <button style="height:35px;width:120px;" type="button">Reset</button></a>
+            <button type="submit" style="margin: 0;">Filter</button>
+            <button type="button" onclick="window.location.href='/'" style="margin: 0;">Reset</button>
         </div>
     </form>
+
     <hr>
 
-    <h2>System Files</h2>
+    <!-- Simplified File List -->
     <div>
         {% for file in files %}
-            <div class="file-item">
-                <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <div>
-                        <strong>{{ file['original_filename'] }}</strong> 
-                        <span style="color: #666; font-size: 0.9em;">(Category: {{ file['category'] }})</span>
-                        <div style="font-size: 0.8em; color: #999;">Uploaded: {{ file['upload_timestamp'] }}</div>
-                    </div>
-                    
-                    <!-- Action buttons container -->
-                    <div style="display: flex; gap: 8px;">
-                        <!-- Download action -->
-                        <a href="/download/{{ file['physical_filename'] }}">
-                            <button style="height:40px;width:120px" type="button">⬇️ Download</button>
-                        </a>
-                        
-                        <!-- Delete action via POST request -->
-                        <form action="/delete/{{ file['id'] }}" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this file?');" style="margin: 0;">
-                            <button style="height:40px;width:120px" type="submit">🗑️ Delete</button>
-                        </form>
-                    </div>
-                </div>
+            <div class="file-list-item" 
+                 data-filename="{{ file['original_filename'] }}"
+                 data-category="{{ file['category'] }}"
+                 data-physical="{{ file['physical_filename'] }}"
+                 data-id="{{ file['id'] }}"
+                 data-metadata="{{ file['metadata'] | e }}"
+                 onclick="openDetailsModal(this)">
                 
-                <div class="metadata-box">
-                    <strong>Metadata:</strong><br>
-                    {{ file['metadata'] }}
-                </div>
+                <strong>{{ file['original_filename'] }}</strong>
+                <span style="background: #333; padding: 4px 8px; border-radius: 12px; font-size: 0.85em; color: #bbb;">
+                    {{ file['category'] | upper }}
+                </span>
+                
             </div>
         {% else %}
-            <p style="color: #666;">No records found matching your criteria or system is empty.</p>
+            <p style="color: #666; text-align: center; padding: 20px;">No records found matching your criteria or system is empty.</p>
         {% endfor %}
     </div>
 
+    <!-- Upload Modal -->
+    <div id="upload-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('upload-modal')">&times;</span>
+            <h3 style="margin-top: 0;">Upload Record</h3>
+            
+            <form action="/upload" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="file"><strong>File:</strong></label>
+                    <input type="file" name="file" id="file" style="margin-top: 5px;" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category"><strong>Category:</strong></label>
+                    <select name="category" id="category" onchange="updateDynamicFields()" style="margin-top: 5px;" required>
+                        <option value="">Select a category...</option>
+                        <option value="article">Article</option>
+                        <option value="mtg">Magic: The Gathering Card</option>
+                        <option value="project">Project Archive</option>
+                    </select>
+                </div>
+
+                <div id="dynamic-fields-container"></div>
+
+                <button type="submit" style="width: 100%; background-color: #28a745; color: white; border: none; margin-top: 10px;">Upload to System</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- File Details Modal -->
+    <div id="details-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('details-modal')">&times;</span>
+            <h3 id="modal-filename" style="margin-top: 0; word-break: break-all;"></h3>
+            
+            <div style="margin-bottom: 15px;">
+                <strong>Category:</strong> <span id="modal-category"></span>
+            </div>
+            
+            <strong>Metadata:</strong>
+            <div id="modal-metadata" class="metadata-box"></div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <a id="modal-download-link" href="#" style="flex: 1;">
+                    <button type="button" style="width: 100%; background-color: #007bff; color: white; border: none;">⬇️ Download</button>
+                </a>
+                
+                <form id="modal-delete-form" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this file?');" style="margin: 0; flex: 1;">
+                    <button type="submit" style="width: 100%; background-color: #dc3545; color: white; border: none;">🗑️ Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
-        /**
-         * Configuration object defining category-specific metadata fields.
-         * Expand this object to add new categories seamlessly.
-         */
         const schemaConfig = {
             article: [
                 { name: 'title', label: 'Title', type: 'text' },
@@ -119,30 +223,72 @@
         function updateDynamicFields() {
             const category = document.getElementById('category').value;
             const container = document.getElementById('dynamic-fields-container');
-            
-            // Clear the container
             container.innerHTML = ''; 
 
             if (schemaConfig[category]) {
                 schemaConfig[category].forEach(field => {
-                    // Create a wrapper div for each field
                     const formGroup = document.createElement('div');
                     formGroup.className = 'form-group';
                     
                     const label = document.createElement('label');
-                    label.textContent = field.label + ":";
+                    label.innerHTML = `<strong>${field.label}:</strong>`;
                     label.setAttribute('for', field.name);
                     
                     const input = document.createElement('input');
                     input.type = field.type;
                     input.name = field.name;
                     input.id = field.name;
+                    input.style.marginTop = '5px';
                     input.required = true;
                     
                     formGroup.appendChild(label);
                     formGroup.appendChild(input);
                     container.appendChild(formGroup);
                 });
+            }
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function openDetailsModal(element) {
+            const filename = element.getAttribute('data-filename');
+            const category = element.getAttribute('data-category');
+            const physicalFilename = element.getAttribute('data-physical');
+            const id = element.getAttribute('data-id');
+            const metadataStr = element.getAttribute('data-metadata');
+
+            document.getElementById('modal-filename').textContent = filename;
+            document.getElementById('modal-category').textContent = category.toUpperCase();
+            
+            document.getElementById('modal-download-link').href = '/download/' + physicalFilename;
+            document.getElementById('modal-delete-form').action = '/delete/' + id;
+
+            const metadataContainer = document.getElementById('modal-metadata');
+            try {
+                const metadataObj = JSON.parse(metadataStr);
+                let formattedMetadata = '';
+                for (const [key, value] of Object.entries(metadataObj)) {
+                    const formattedKey = key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    formattedMetadata += `<strong>${formattedKey}:</strong> ${value}<br><br>`;
+                }
+                metadataContainer.innerHTML = formattedMetadata || 'No additional metadata available.';
+            } catch (e) {
+                metadataContainer.textContent = metadataStr;
+            }
+
+            openModal('details-modal');
+        }
+
+        // Close modals if clicked outside the content box
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.style.display = "none";
             }
         }
     </script>
