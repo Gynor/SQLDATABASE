@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Local Metadata Database</title>
+    <title>Core of Alucard</title>
     <style>
         /* Basic readability styles */
         body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
@@ -41,21 +41,20 @@
     
     <h2>Search and Filter Records</h2>
     <form action="/" method="GET">
-        <div class="form-group" style="display: flex; gap: 10px;">
-            <input type="text" name="search" placeholder="Search filename or metadata content..." value="{{ search_query }}">
+        <div class="form-group" style="display: flex; gap: 10px; align-items: stretch;">
+            <input type="text" name="search" placeholder="Search filename or metadata content..." value="{{ search_query }}" style="margin: 0; flex: 1;">
             
-            <select name="filter_category" style="width: auto;">
+            <select name="filter_category" style="width: auto; margin: 0;">
                 <option value="">All Categories</option>
                 <option value="article" {% if cat_filter == 'article' %}selected{% endif %}>Article</option>
                 <option value="mtg" {% if cat_filter == 'mtg' %}selected{% endif %}>MTG Card</option>
                 <option value="project" {% if cat_filter == 'project' %}selected{% endif %}>Project Archive</option>
             </select>
             
-            <button type="submit">Filter</button>
-            <a href="/"><button type="button">Reset</button></a>
+            <button style="height:35px;width:120px;" type="submit">Filter</button></a>
+            <button style="height:35px;width:120px;" type="button">Reset</button></a>
         </div>
     </form>
-
     <hr>
 
     <h2>System Files</h2>
@@ -64,14 +63,23 @@
             <div class="file-item">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <!-- Access via sqlite3.Row -->
                         <strong>{{ file['original_filename'] }}</strong> 
                         <span style="color: #666; font-size: 0.9em;">(Category: {{ file['category'] }})</span>
                         <div style="font-size: 0.8em; color: #999;">Uploaded: {{ file['upload_timestamp'] }}</div>
                     </div>
-                    <a href="/download/{{ file['physical_filename'] }}">
-                        <button type="button">⬇️ Download</button>
-                    </a>
+                    
+                    <!-- Action buttons container -->
+                    <div style="display: flex; gap: 8px;">
+                        <!-- Download action -->
+                        <a href="/download/{{ file['physical_filename'] }}">
+                            <button style="height:40px;width:120px" type="button">⬇️ Download</button>
+                        </a>
+                        
+                        <!-- Delete action via POST request -->
+                        <form action="/delete/{{ file['id'] }}" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this file?');" style="margin: 0;">
+                            <button style="height:40px;width:120px" type="submit">🗑️ Delete</button>
+                        </form>
+                    </div>
                 </div>
                 
                 <div class="metadata-box">

@@ -146,6 +146,32 @@ def download_file(physical_filename):
         download_name=file_record['original_filename'] # User sees original name, not UUID
     )
 
+@app.route('/delete/<int:file_id>', methods=['POST'])
+def delete_file(file_id):
+    """
+    Deletes the file from the physical storage and removes its record from the database.
+    """
+    with get_db_connection() as conn:
+        # Fetch the physical filename associated with the given file ID
+        file_record = conn.execute(
+            "SELECT physical_filename FROM files WHERE id = ?", 
+            (file_id,)
+        ).fetchone()
+        
+        if file_record:
+            physical_filename = file_record['physical_filename']
+            filepath = os.path.join(UPLOAD_FOLDER, physical_filename)
+            
+            # Remove the physical file from the disk if it exists
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                
+            # Remove the corresponding record from the database
+            conn.execute("DELETE FROM files WHERE id = ?", (file_id,))
+            conn.commit()
+            
+    return redirect('/')
+
 if __name__ == '__main__':
     # Run the Flask development server
     app.run(host='192.168.1.226', port=5000)
