@@ -106,21 +106,25 @@
         <button onclick="openModal('upload-modal')" style="background-color: #007bff; color: white; border: none;">+ Upload New File</button>
     </div>
 
-    <!-- Search and Filter Section -->
+<!-- Search and Filter Section -->
     <form action="/" method="GET" style="margin-bottom: 20px;">
-        <div class="form-group" style="display: flex; gap: 10px; align-items: stretch;">
+        <div class="form-group" style="display: flex; gap: 10px; align-items: stretch; margin-bottom: 10px;">
             <input type="text" name="search" placeholder="Search filename or metadata content..." value="{{ search_query }}" style="margin: 0; flex: 1;">
             
-            <select name="filter_category" style="width: auto; margin: 0;">
+            <!-- Added id="filter_category" and onchange event -->
+            <select name="filter_category" id="filter_category" style="width: auto; margin: 0;" onchange="updateSearchCheckboxes()">
                 <option value="">All Categories</option>
                 <option value="article" {% if cat_filter == 'article' %}selected{% endif %}>Article</option>
                 <option value="mtg" {% if cat_filter == 'mtg' %}selected{% endif %}>MTG Card</option>
                 <option value="project" {% if cat_filter == 'project' %}selected{% endif %}>Project Archive</option>
             </select>
             
-            <button type="submit" style="margin: 0;">Filter</button>
+            <button type="submit" style="margin: 0; background-color: #007bff; color: white; border: none;">Filter</button>
             <button type="button" onclick="window.location.href='/'" style="margin: 0;">Reset</button>
         </div>
+        
+        <!-- Container for dynamic search checkboxes -->
+        <div id="search-fields-container" style="display: flex; gap: 15px; font-size: 0.9em; color: #bbb; flex-wrap: wrap; margin-left: 5px;"></div>
     </form>
 
     <hr>
@@ -292,6 +296,53 @@
                 event.target.style.display = "none";
             }
         }
+
+        /* Generates search sub-field checkboxes based on the selected category in the search bar. */
+        function updateSearchCheckboxes() {
+            const category = document.getElementById('filter_category').value;
+            const container = document.getElementById('search-fields-container');
+            container.innerHTML = ''; // Clear previous checkboxes
+
+            if (schemaConfig[category]) {
+                // Title for specific search fields
+                const labelTitle = document.createElement('span');
+                labelTitle.textContent = 'Search specific fields:';
+                labelTitle.style.color = '#fff';
+                labelTitle.style.marginRight = '5px';
+                container.appendChild(labelTitle);
+
+                // Retrieve previously checked boxes from the URL to keep them checked on page reload
+                const urlParams = new URLSearchParams(window.location.search);
+                const checkedFields = urlParams.getAll('search_field');
+
+                schemaConfig[category].forEach(field => {
+                    const label = document.createElement('label');
+                    label.style.display = 'flex';
+                    label.style.alignItems = 'center';
+                    label.style.gap = '4px';
+                    label.style.cursor = 'pointer';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.name = 'search_field';
+                    checkbox.value = field.name;
+                    
+                    // If this checkbox was checked in the previous search, keep it checked
+                    if (checkedFields.includes(field.name)) {
+                        checkbox.checked = true;
+                    }
+
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(field.label));
+                    container.appendChild(label);
+                });
+            }
+        }
+
+        // Automatically generate checkboxes on page load if a category is already selected
+        document.addEventListener("DOMContentLoaded", function() {
+            updateSearchCheckboxes();
+        });
     </script>
 </body>
 </html>

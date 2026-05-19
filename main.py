@@ -47,11 +47,14 @@ init_db()
 @app.route('/', methods=['GET'])
 def index():
     """
-    Home page route. 
-    Lists uploaded files, handles search queries, and category filtering.
+    Ana sayfa rotası. Yüklü dosyaları listeler, arama ve filtreleme işlemlerini yapar.
+    Gelişmiş JSON alan araması (Field-specific search) destekler.
     """
     search_query = request.args.get('search', '').strip()
     cat_filter = request.args.get('filter_category', '').strip()
+    
+    # Kullanıcının işaretlediği spesifik metadata alanlarının listesini al (örn: ['mana_cost', 'card_name'])
+    search_fields = request.args.getlist('search_field')
 
     query = "SELECT * FROM files WHERE 1=1"
     params = []
@@ -61,9 +64,22 @@ def index():
         params.append(cat_filter)
     
     if search_query:
-        # Search within both the original filename and the JSON metadata
-        query += " AND (original_filename LIKE ? OR metadata LIKE ?)"
-        params.extend([f"%{search_query}%", f"%{search_query}%"])
+        if cat_filter and search_fields:
+            # Sadece seçilen kategoriye ait, işaretlenen kutucuklarda arama yap.
+            # (Dosya adında da her ihtimale karşı arama yapmaya devam ediyoruz)
+            field_conditions = ["original_filename LIKE ?"]
+            params.append(f"%{search_query}%")
+            
+            for field in search_fields:
+                # SQLite json_extract ile doğrudan spesifik JSON anahtarına odaklan
+                field_conditions.append(f"json_extract(metadata, '$.{field}') LIKE ?")
+                params.append(f"%{search_query}%")
+                
+            query += f" AND ({' OR '.join(field_conditions)})"
+        else:
+            # Hiçbir kutucuk işaretlenmediyse veya kategori seçilmediyse eski usul genel arama yap
+            query += " AND (original_filename LIKE ? OR metadata LIKE ?)"
+            params.extend([f"%{search_query}%", f"%{search_query}%"])
 
     query += " ORDER BY id DESC"
 
